@@ -44,6 +44,8 @@ static __always_inline bool identity_is_node(__u32 identity)
  * - IdentityUnknown
  * - ReservedIdentityHost
  * - ReservedIdentityWorld
+ * - ReservedIdentityWorldIPv4
+ * - ReservedIdentityWorldIPv6
  * - ReservedIdentityRemoteNode
  * - ReservedIdentityKubeAPIServer
  *
@@ -56,7 +58,12 @@ static __always_inline bool identity_is_node(__u32 identity)
  */
 static __always_inline bool identity_is_reserved(__u32 identity)
 {
-	return identity < UNMANAGED_ID || identity_is_remote_node(identity);
+#if defined ENABLE_IPV4 && defined ENABLE_IPV6
+		return identity < UNMANAGED_ID || identity_is_remote_node(identity) ||
+			identity == WORLD_IPV4_ID || identity == WORLD_IPV6_ID;
+#else
+		return identity < UNMANAGED_ID || identity_is_remote_node(identity);
+#endif
 }
 
 /**
@@ -65,6 +72,8 @@ static __always_inline bool identity_is_reserved(__u32 identity)
  *
  * This function will return false for:
  * - ReservedIdentityWorld
+ * - ReservedIdentityWorldIPv4
+ * - ReservedIdentityWorldIPv6
  * - an identity in the CIDR range
  *
  * This function will return true for:
@@ -79,8 +88,13 @@ static __always_inline bool identity_is_reserved(__u32 identity)
  */
 static __always_inline bool identity_is_cluster(__u32 identity)
 {
+#if defined ENABLE_IPV4 && defined ENABLE_IPV6
+	if (identity == WORLD_ID || identity == WORLD_IPV4_ID || identity == WORLD_IPV6_ID)
+		return false;
+#else
 	if (identity == WORLD_ID)
 		return false;
+#endif
 
 	if (identity_in_range(identity, CIDR_IDENTITY_RANGE_START,
 			      CIDR_IDENTITY_RANGE_END))
@@ -137,7 +151,18 @@ static __always_inline __u32 inherit_identity_from_host(struct __ctx_buff *ctx, 
 		*identity = get_epid(ctx); /* endpoint identity, not security identity! */
 #endif
 	} else {
+#if defined ENABLE_IPV4 && defined ENABLE_IPV6
+		__u16 proto = ctx_get_protocol(ctx);
+
+		if (proto == bpf_htons(ETH_P_IP))
+			*identity = WORLD_IPV4_ID;
+		else if (proto == bpf_htons(ETH_P_IPV6))
+			*identity = WORLD_IPV6_ID;
+		else
+			*identity = WORLD_ID;
+#else
 		*identity = WORLD_ID;
+#endif
 	}
 
 	/* Reset packet mark to avoid hitting routing rules again */
