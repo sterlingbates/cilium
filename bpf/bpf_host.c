@@ -357,7 +357,7 @@ handle_ipv6_cont(struct __ctx_buff *ctx, __u32 secctx, const bool from_host,
 	}
 #endif
 
-	if (!info || info->sec_identity == WORLD_IPV6_ID) {
+	if (!info || identity_is_world_ipv6(info->sec_identity)) {
 		/* See IPv4 comment. */
 		return DROP_UNROUTABLE;
 	}
@@ -764,7 +764,7 @@ skip_vtep:
 	}
 #endif
 
-	if (!info || info->sec_identity == WORLD_IPV4_ID) {
+	if (!info || identity_is_world_ipv4(info->sec_identity)) {
 		/* We have received a packet for which no ipcache entry exists,
 		 * we do not know what to do with this packet, drop it.
 		 *

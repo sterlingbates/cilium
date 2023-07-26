@@ -67,6 +67,40 @@ static __always_inline bool identity_is_reserved(__u32 identity)
 }
 
 /**
+ * identity_is_world_ipv4 is used to determine whether an identity is the world-ipv4
+ * reserved identity.
+ *
+ * Specifically, it should return true if the identity is one of these:
+ * - ReservedIdentityWorld
+ * - ReservedIdentityWorldIPv4
+ */
+static __always_inline bool identity_is_world_ipv4(__u32 identity)
+{
+#if defined ENABLE_IPV4 && defined ENABLE_IPV6
+		return identity == WORLD_ID || identity == WORLD_IPV4_ID;
+#else
+		return identity == WORLD_ID;
+#endif
+}
+
+/**
+ * identity_is_world_ipv6 is used to determine whether an identity is the world-ipv6
+ * reserved identity.
+ *
+ * Specifically, it should return true if the identity is one of these:
+ * - ReservedIdentityWorld
+ * - ReservedIdentityWorldIPv6
+ */
+static __always_inline bool identity_is_world_ipv6(__u32 identity)
+{
+#if defined ENABLE_IPV4 && defined ENABLE_IPV6
+		return identity == WORLD_ID || identity == WORLD_IPV6_ID;
+#else
+		return identity == WORLD_ID;
+#endif
+}
+
+/**
  * identity_is_cluster is used to determine whether an identity is assigned to
  * an entity inside the cluster.
  *

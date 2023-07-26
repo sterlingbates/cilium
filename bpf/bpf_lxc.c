@@ -2182,7 +2182,7 @@ int cil_to_container(struct __ctx_buff *ctx)
 #ifdef ENABLE_IPV6
 	case bpf_htons(ETH_P_IPV6):
 # ifdef ENABLE_HIGH_SCALE_IPCACHE
-	if (identity == WORLD_IPV6_ID) {
+	if (identity_is_world_ipv6(identity)) {
 		struct endpoint_info *ep;
 		void *data, *data_end;
 		struct ipv6hdr *ip6;
@@ -2205,7 +2205,7 @@ int cil_to_container(struct __ctx_buff *ctx)
 #ifdef ENABLE_IPV4
 	case bpf_htons(ETH_P_IP):
 # ifdef ENABLE_HIGH_SCALE_IPCACHE
-	if (identity == WORLD_IPV4_ID) {
+	if (identity_is_world_ipv4(identity)) {
 		struct endpoint_info *ep;
 		void *data, *data_end;
 		struct iphdr *ip4;

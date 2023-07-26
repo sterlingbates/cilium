@@ -850,7 +850,16 @@ func (p *DNSProxy) ServeDNS(w dns.ResponseWriter, request *dns.Msg) {
 		return
 	}
 
-	targetServerID := identity.ReservedIdentityWorld
+	var targetServerID identity.NumericIdentity
+	if option.Config.EnableIPv4 && option.Config.EnableIPv6 {
+		if targetServerIP.To4() == nil {
+			targetServerID = identity.ReservedIdentityWorldIPv4
+		} else {
+			targetServerID = identity.ReservedIdentityWorldIPv4
+		}
+	} else {
+		targetServerID = identity.ReservedIdentityWorld
+	}
 	// Ignore invalid IP - getter will handle invalid value.
 	targetServerAddr, _ := ippkg.AddrFromIP(targetServerIP)
 	if serverSecID, exists := p.LookupSecIDByIP(targetServerAddr); !exists {
