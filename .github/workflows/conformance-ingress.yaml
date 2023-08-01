@@ -91,11 +91,14 @@ jobs:
           fi
           echo sha=${SHA} >> $GITHUB_OUTPUT
 
-      - name: Checkout
+      - name: Checkout context ref
         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
         with:
-          ref: ${{ steps.vars.outputs.sha }}
+          ref: ${{ inputs.context-ref || github.sha }}
           persist-credentials: false
+
+      - name: Set Environment Variables
+        uses: ./.github/actions/set-env-variables
 
       - name: Create minikube cluster with multiple nodes
         uses: medyagh/setup-minikube@e0505489c98496aff6ed17db0ba68bf7ecadf730 # v0.0.14
