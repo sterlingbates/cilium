@@ -52,7 +52,9 @@ func (p *IPSecSuitePrivileged) TestLoadKeysNoFile(c *C) {
 
 func (p *IPSecSuitePrivileged) TestInvalidLoadKeys(c *C) {
 	keys := bytes.NewReader(invalidKeysDat)
-	_, _, err := LoadIPSecKeys(keys)
+	_, spi, err := LoadIPSecKeys(keys)
+	c.Assert(err, NotNil)
+	err = SetIPSecSPI(spi)
 	c.Assert(err, NotNil)
 
 	_, local, err := net.ParseCIDR("1.1.3.4/16")
@@ -66,10 +68,14 @@ func (p *IPSecSuitePrivileged) TestInvalidLoadKeys(c *C) {
 
 func (p *IPSecSuitePrivileged) TestLoadKeys(c *C) {
 	keys := bytes.NewReader(keysDat)
-	_, _, err := LoadIPSecKeys(keys)
+	_, spi, err := LoadIPSecKeys(keys)
+	c.Assert(err, IsNil)
+	err = SetIPSecSPI(spi)
 	c.Assert(err, IsNil)
 	keys = bytes.NewReader(keysAeadDat)
-	_, _, err = LoadIPSecKeys(keys)
+	_, spi, err = LoadIPSecKeys(keys)
+	c.Assert(err, IsNil)
+	err = SetIPSecSPI(spi)
 	c.Assert(err, IsNil)
 }
 
