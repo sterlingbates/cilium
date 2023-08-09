@@ -1,4 +1,4 @@
-name: Container vulnerability scan
+name: Container Vulnerability Scan
 on:
   schedule:
     - cron: "0 4 * * *"

@@ -1,4 +1,4 @@
-name: ConformanceAKS (ci-aks)
+name: Conformance AKS (ci-aks)
 
 # Any change in triggers needs to be reflected in the concurrency group.
 on:

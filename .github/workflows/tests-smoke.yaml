@@ -1,4 +1,4 @@
-name: Smoke test
+name: Smoke Test
 
 # Any change in triggers needs to be reflected in the concurrency group.
 on:

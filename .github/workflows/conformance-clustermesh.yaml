@@ -1,4 +1,4 @@
-name: ClusterMesh (ci-multicluster)
+name: Conformance Cluster Mesh (ci-clustermesh)
 
 # Any change in triggers needs to be reflected in the concurrency group.
 on:
