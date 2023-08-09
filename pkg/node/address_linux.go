@@ -10,6 +10,9 @@ import (
 	"fmt"
 	"net"
 	"sort"
+	"strconv"
+	"runtime"
+	//"strings"
 
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
@@ -22,6 +25,15 @@ func firstGlobalAddr(intf string, preferredIP net.IP, family int, preferPublic b
 	var link netlink.Link
 	var ipLen int
 	var err error
+
+	log.Info("vpc:firstGlobalAddr; intf="+intf+"; family="+strconv.Itoa(family)+"; preferPublic="+strconv.FormatBool(preferPublic))
+	if preferredIP != nil {
+		log.Info("vpc:preferredIP: "+preferredIP.String())
+	}
+	b := make([]byte, 2048)
+	n := runtime.Stack(b, false)
+	s := string(b[:n])
+	log.Info("vpc:firstGlobalAddr stack: "+s)
 
 	ipsToExclude := GetExcludedIPs()
 	linkScopeMax := unix.RT_SCOPE_UNIVERSE
@@ -50,17 +62,26 @@ retryScope:
 	ipsPublic := []net.IP{}
 	ipsPrivate := []net.IP{}
 	hasPreferred := false
+	// preferPublic = false
 
 	for _, a := range addr {
+		log.Info("vpc:retryScope: a.IP="+a.IP.String())
 		if a.Scope <= linkScopeMax {
+			log.Info("vpc:retryScope: Within link scope max")
 			if ip.IsExcluded(ipsToExclude, a.IP) {
+				log.Info("vpc:retryScope: IP is excluded: "+a.IP.String())
 				continue
 			}
 			if len(a.IP) >= ipLen {
 				if ip.IsPublicAddr(a.IP) {
+					log.Info("vpc:retryScope: IP is public: "+a.IP.String())
+					// log.Info("vpc:retryScope: IGNORING PUBLIC IP")
 					ipsPublic = append(ipsPublic, a.IP)
 				} else {
+					log.Info("vpc:retryScope: IP is private: "+a.IP.String())
+					// if strings.Contains(a.IP.String(), "198.18") {
 					ipsPrivate = append(ipsPrivate, a.IP)
+					// }
 				}
 				// If the IP is the same as the preferredIP, that
 				// means that maybe it is restored from node_config.h,
@@ -73,11 +94,25 @@ retryScope:
 	}
 
 	if hasPreferred && !preferPublic {
+		log.Info("vpc:Found a preferred non-public IP: "+preferredIP.String())
 		return preferredIP, nil
+	}
+	log.Info("vpc:Did not find preferred non-public IP")
+
+	if link != nil && preferredIP != nil {
+		hasRoute, err := hasPreferredIpOnRoute(preferredIP, link)
+		if err != nil {
+			return nil, err
+		}
+		if hasRoute {
+			log.Info("vpc:Returning preferred IP for device")
+			return preferredIP, nil
+		}
 	}
 
 	if len(ipsPublic) != 0 {
 		if hasPreferred && ip.IsPublicAddr(preferredIP) {
+			log.Info("vpc:Found preferred IP as public")
 			return preferredIP, nil
 		}
 
@@ -87,6 +122,7 @@ retryScope:
 			return bytes.Compare(ipsPublic[i], ipsPublic[j]) < 0
 		})
 
+		log.Info("vpc:Found public IP: "+ipsPublic[0].String())
 		return ipsPublic[0], nil
 	}
 
@@ -100,6 +136,7 @@ retryScope:
 			return bytes.Compare(ipsPrivate[i], ipsPrivate[j]) < 0
 		})
 
+		log.Info("vpc:Found private IP: "+ipsPrivate[0].String())
 		return ipsPrivate[0], nil
 	}
 
@@ -120,6 +157,37 @@ retryScope:
 	}
 
 	return nil, fmt.Errorf("No address found")
+}
+
+// Identify whether the device has a route with the preferred IP as the source address.
+func hasPreferredIpOnRoute(preferredIP net.IP, link netlink.Link) (bool, error) {
+	log.Info("sb Looking for preferred IP on route")
+	linkIndex := link.Attrs().Index
+	routes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
+	if err != nil {
+		return false, err
+	}
+
+	for _, route := range routes {
+		if preferredIP.Equal(route.Src) {
+			// See if the given device is on this route
+			if len(route.MultiPath) != 0 {
+				for _, path := range route.MultiPath {
+					if path.LinkIndex == linkIndex {
+						log.Info("sb Found preferred IP on multipath route")
+						return true, nil
+					}
+				}
+			} else if route.Gw != nil {
+				if route.LinkIndex == linkIndex {
+					log.Info("sb Found preferred IP on gateway route")
+					return true, nil
+				}
+			}
+		}
+	}
+	log.Info("sb Did not find preferred IP")
+	return false, nil
 }
 
 // firstGlobalV4Addr returns the first IPv4 global IP of an interface,
