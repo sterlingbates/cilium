@@ -326,9 +326,11 @@ func (n *Node) GetCiliumInternalIP(ipv6 bool) net.IP {
 			continue
 		}
 		if addr.Type == addressing.NodeCiliumInternalIP {
+			log.Info("vpc:GetCiliumInternalIP: found internal: " +addr.IP.String())
 			return addr.IP
 		}
 	}
+	log.Info("vpc:GetCiliumInternalIP: no Cilium internal IP found")
 	return nil
 }
 

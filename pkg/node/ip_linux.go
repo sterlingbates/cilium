@@ -46,6 +46,7 @@ func initExcludedIPs() {
 			continue
 		}
 		for _, a := range addr {
+			// log.Info("vpc:initExcludedIPs: excluding: "+a.IP.String())
 			excludedIPs = append(excludedIPs, a.IP)
 		}
 	}

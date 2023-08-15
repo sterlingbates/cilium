@@ -11,6 +11,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"runtime"
 
 	"github.com/sirupsen/logrus"
 
@@ -89,6 +90,7 @@ func makeIPv6HostIP() net.IP {
 // network device of the system in which case the first address with global
 // scope will be regarded as the system's node address.
 func InitDefaultPrefix(device string) {
+	log.Info("vpc:InitDefaultPrefix: device="+device)
 	addrsMu.Lock()
 	defer addrsMu.Unlock()
 
@@ -171,12 +173,14 @@ func InitNodePortAddrs(devices []string, inheritIPAddrFromDevice string) error {
 		addrs.ipv4NodePortAddrs = make(map[string]net.IP, len(devices))
 		for _, device := range devices {
 			if inheritIPAddrFromDevice != "" {
+				log.Info("vpc:InitNodePortAddrs inheriting "+inheritedIP.String()+" for device "+device)
 				addrs.ipv4NodePortAddrs[device] = inheritedIP
 			} else {
 				ip, err := firstGlobalV4Addr(device, addrs.k8sNodeIP, !preferPublicIP)
 				if err != nil {
 					return fmt.Errorf("failed to determine IPv4 of %s for NodePort", device)
 				}
+				log.Info("vpc:InitNodePortAddrs using "+ip.String()+" for device "+device)
 				addrs.ipv4NodePortAddrs[device] = ip
 			}
 		}
@@ -220,6 +224,7 @@ func InitBPFMasqueradeAddrs(devices []string) error {
 				return fmt.Errorf("Failed to determine IPv4 of %s for BPF masq", ifaceName)
 			}
 			for _, device := range devices {
+				log.Info("vpc:InitBPFMasqAddrs assigning "+ip.String()+" to device "+device)
 				addrs.ipv4MasqAddrs[device] = ip
 			}
 			return nil
@@ -316,6 +321,11 @@ func GetCiliumEndpointNodeIP() string {
 // Cilium-managed network (this means within the node for direct routing mode and on the overlay
 // for tunnel mode).
 func SetInternalIPv4Router(ip net.IP) {
+	b := make([]byte, 4096)
+	n := runtime.Stack(b, false)
+	s := string(b[:n])
+	log.Info("vpc:SetInternalIPv4Router stack: "+s)
+	log.Info("vpc:SetInternalIPv4Router: ip="+ip.String())
 	addrsMu.Lock()
 	addrs.ipv4RouterAddress = clone(ip)
 	addrsMu.Unlock()
@@ -442,6 +452,13 @@ func AutoComplete() error {
 		restoreCiliumHostIPsFromFS()
 	}
 
+	log.Info("vpc:AutoComplete: device="+option.Config.DirectRoutingDevice)
+	if addrs.ipv4RouterAddress != nil {
+		log.Info("vpc:AutoComplete: addrs.ipv4RouterAddress="+addrs.ipv4RouterAddress.String())
+	}
+	if addrs.ipv4Address != nil {
+		log.Info("vpc:AutoComplete: addrs.ipv4Address="+addrs.ipv4Address.String())
+	}
 	InitDefaultPrefix(option.Config.DirectRoutingDevice)
 
 	if option.Config.EnableIPv6 && addrs.ipv6AllocRange == nil {
